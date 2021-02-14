@@ -2,10 +2,42 @@
 //
 
 #include <iostream>
+#include "DRBE_Test.h"
+#include "Optimize_Test.h"
+
+using namespace std;
+DRBE_Test drbe;
+
+Optimize_Test ot;
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    int a = 2;
+    vector<double*> aa = {0,0,0};
+    vector<double*>::iterator iter;
+
+    aa = ot.Matrix_generator(10,10,10,10);
+
+
+
+
+
+
+    int i = 0;
+    cout << endl;
+    while (i < 9)
+    {
+        cout << *(aa[0] + i) << ",";
+        i++;
+    }
+
+        
+
+    //drbe.t_angle = 0;
+    //drbe.t_id = 1;
+    //drbe.Test_return(a);
+
+    //std::cout << "Hello World!\n";
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

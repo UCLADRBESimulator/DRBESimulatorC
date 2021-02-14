@@ -139,7 +139,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AntennaMotion.cpp" />
     <ClCompile Include="DRBE_Simulator_C++.cpp" />
+    <ClCompile Include="DRBE_Test.cpp" />
+    <ClCompile Include="GeometryEngine.cpp" />
+    <ClCompile Include="Optimize_Test.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AntennaMotion.h" />
+    <ClInclude Include="DRBE_Test.h" />
+    <ClInclude Include="GeometryEngine.h" />
+    <ClInclude Include="Optimize_Test.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
