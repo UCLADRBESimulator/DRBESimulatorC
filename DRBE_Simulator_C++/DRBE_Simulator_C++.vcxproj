@@ -29,7 +29,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -142,16 +142,28 @@
     <ClCompile Include="AntennaMotion.cpp" />
     <ClCompile Include="DRBE_Simulator_C++.cpp" />
     <ClCompile Include="DRBE_Test.cpp" />
+    <ClCompile Include="General_method.cpp" />
     <ClCompile Include="GeometryEngine.cpp" />
     <ClCompile Include="Optimize_Test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AntennaMotion.h" />
     <ClInclude Include="DRBE_Test.h" />
+    <ClInclude Include="General_method.h" />
     <ClInclude Include="GeometryEngine.h" />
     <ClInclude Include="Optimize_Test.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\Eigen.3.3.3\build\native\Eigen.targets" Condition="Exists('..\packages\Eigen.3.3.3\build\native\Eigen.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Eigen.3.3.3\build\native\Eigen.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Eigen.3.3.3\build\native\Eigen.targets'))" />
+  </Target>
 </Project>

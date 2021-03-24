@@ -30,6 +30,9 @@
     <ClCompile Include="Optimize_Test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="General_method.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DRBE_Test.h">
@@ -44,5 +47,11 @@
     <ClInclude Include="Optimize_Test.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="General_method.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
