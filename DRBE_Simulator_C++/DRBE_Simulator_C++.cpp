@@ -13,9 +13,11 @@
 #include <complex>
 #include <cmath>
 #include <valarray>
+#include <unsupported/Eigen/MatrixFunctions>
+
 
 #define PI 3.14159265358979323846
-#define PI2 3.14159265359*2
+#define PI2 3.14159265358979323846*2
 
 using namespace std;
 using namespace Eigen;
@@ -898,46 +900,92 @@ public:
     Antenna_out& Order4(vector<int>& IDv, vector<double>& TxAziAng, vector<double>& TxEleAng, vector<double>& RxAziAng, vector<double>& RxEleAng, int SecFidel)
     {
         int i = 0;
+        int i1 = 0;
+        int i2 = 0;
         double TxGain = 0;
         double RxGain = 0;
         antenna_out.Gain_vec.clear();
         antenna_out.Gain = 0;
         vector<double> angle_vec;
         vector<double> window_vec;
+
         vector<double> tx_sectored_beam_azimuth(no_antennas, 0);
         vector<double> tx_sectored_beam_elevation(no_antennas, 0);
         vector<double> rx_sectored_beam_azimuth(no_antennas, 0);
         vector<double> rx_sectored_beam_elevation(no_antennas, 0);
+        
         vector<double> k;
         vector<double> psi;
         vector<double> n;
+        
+        VectorXd mk = VectorXd(no_antennas);
+        VectorXd mpsi = VectorXd(no_antennas);
+        VectorXd mn = VectorXd(no_antennas);
+
+        int zeropad_size = pow(2, nextpow2n(no_bins)) - no_antennas + 2;
+        int a_zero_totalsize = zeropad_size + no_antennas - 1;
+
+
         vector<double> zeroadd(pow(2,nextpow2n(no_bins))-no_antennas + 2);
+
+        VectorXcd mtx_sectored_beam_azimuth = VectorXcd(no_antennas).setZero();
+        VectorXcd mtx_sectored_beam_elevation = VectorXcd(no_antennas).setZero();
+        VectorXcd mrx_sectored_beam_azimuth = VectorXcd(no_antennas).setZero();
+        VectorXcd mrx_sectored_beam_elevation = VectorXcd(no_antennas).setZero();
+
+
+
+
+
+
+        VectorXcd mtx_azimuth_awv_domain = VectorXcd(no_antennas);
+        VectorXcd mtx_elevation_awv_domain = VectorXcd(no_antennas);
+        VectorXcd mrx_azimuth_awv_domain = VectorXcd(no_antennas);
+        VectorXcd mrx_elevation_awv_domain = VectorXcd(no_antennas);
+
         vector<complex<double>> tx_azimuth_awv_domain;
         vector<complex<double>> tx_elevation_awv_domain;
         vector<complex<double>> rx_azimuth_awv_domain;
         vector<complex<double>> rx_elevation_awv_domain;
+
+        VectorXcd mawn_tx_azimuth = VectorXcd(no_antennas);
+        VectorXcd mawn_tx_elevation = VectorXcd(no_antennas);
+        VectorXcd mawn_rx_azimuth = VectorXcd(no_antennas);
+        VectorXcd mawn_rx_elevation = VectorXcd(no_antennas);
 
         vector<complex<double>> awn_tx_azimuth;
         vector<complex<double>> awn_tx_elevation;
         vector<complex<double>> awn_rx_azimuth;
         vector<complex<double>> awn_rx_elevation;
 
+        VectorXcd max_tx_azimuth = VectorXcd(no_antennas-1);
+        VectorXcd max_tx_elevation = VectorXcd(no_antennas-1);
+        VectorXcd max_rx_azimuth = VectorXcd(no_antennas-1);
+        VectorXcd max_rx_elevation = VectorXcd(no_antennas-1);
+
         vector<complex<double>> ax_tx_azimuth;
         vector<complex<double>> ax_tx_elevation;
         vector<complex<double>> ax_rx_azimuth;
         vector<complex<double>> ax_rx_elevation;
 
-        vector<complex<double>> a_tx_azimuth;
-        vector<complex<double>> a_tx_elevation;
-        vector<complex<double>> a_rx_azimuth;
-        vector<complex<double>> a_rx_elevation;
+        VectorXcd ma_tx_azimuth = VectorXcd(a_zero_totalsize);
+        VectorXcd ma_tx_elevation = VectorXcd(a_zero_totalsize);
+        VectorXcd ma_rx_azimuth = VectorXcd(a_zero_totalsize);
+        VectorXcd ma_rx_elevation = VectorXcd(a_zero_totalsize);
 
+        MatrixXcd ma_temp = MatrixXcd(no_antennas, no_antennas);
+
+
+        vector<complex<double>> awk_tx_azimuth;
+        vector<complex<double>> awk_tx_elevation;
+        vector<complex<double>> awk_rx_azimuth;
+        vector<complex<double>> awk_rx_elevation;
 
         double ATest = pow(2, nextpow2n(no_bins));
         double new_angleres = 181 / pow(2, nextpow2n(no_bins));
         
 
-        double angle_incre = 180 / (no_antennas - 1);
+        double angle_incre = 180.0 / (no_antennas - 1);
         double tx_thetamin = tx_azimuth_steering_angle - tx_azimuth_beamwidth / 2; // tx azimuth
         double tx_thetamax = tx_azimuth_steering_angle + tx_azimuth_beamwidth / 2;
         double tx_phimin = tx_elevation_steering_angle - tx_elevation_beamwidth / 2; // tx elevation
@@ -962,86 +1010,93 @@ public:
             if ((angle_vec[i] < tx_thetamax) && (angle_vec[i] > tx_thetamin))
             {
                 tx_sectored_beam_azimuth[i] = tx_mainbeam_gain_value;
+                mtx_sectored_beam_azimuth(i) = tx_mainbeam_gain_value;
             }
             else
             {
                 if (SecFidel == 2)
                 {
+                    mtx_sectored_beam_azimuth(i) = unity_gain;
                     tx_sectored_beam_azimuth[i] = unity_gain;
                 }
                 else if (SecFidel == 3)
                 {
+                    mtx_sectored_beam_azimuth(i) = tx_sidelobe_gain_value;
                     tx_sectored_beam_azimuth[i] = tx_sidelobe_gain_value;
                 }
-                else
-                {
-                    tx_sectored_beam_azimuth[i] = unity_gain;
-                }
+
             }
             if ((angle_vec[i] < tx_phimax) && (angle_vec[i] > tx_phimin))
             {
                 tx_sectored_beam_elevation[i] = tx_mainbeam_gain_value;
+                mtx_sectored_beam_elevation(i) = tx_mainbeam_gain_value;
             }
             else
             {
                 if (SecFidel == 2)
                 {
+                    mtx_sectored_beam_elevation(i) = unity_gain;
                     tx_sectored_beam_elevation[i] = unity_gain;
                 }
                 else if (SecFidel == 3)
                 {
+                    mtx_sectored_beam_elevation(i) = tx_sidelobe_gain_value;
                     tx_sectored_beam_elevation[i] = tx_sidelobe_gain_value;
                 }
-                else
-                {
-                    tx_sectored_beam_elevation[i] = unity_gain;
-                }
+
             }
             if ((angle_vec[i] < rx_thetamax) && (angle_vec[i] > rx_thetamin))
             {
                 rx_sectored_beam_azimuth[i] = rx_mainbeam_gain_value;
+                mrx_sectored_beam_azimuth(i) = rx_mainbeam_gain_value;
             }
             else
             {
                 if (SecFidel == 2)
                 {
+                    mrx_sectored_beam_azimuth(i) = unity_gain;
                     rx_sectored_beam_azimuth[i] = unity_gain;
                 }
                 else if (SecFidel == 3)
                 {
+                    mrx_sectored_beam_azimuth(i) = rx_sidelobe_gain_value;
                     rx_sectored_beam_azimuth[i] = rx_sidelobe_gain_value;
                 }
-                else
-                {
-                    rx_sectored_beam_azimuth[i] = unity_gain;
-                }
+
             }
             if ((angle_vec[i] < rx_phimax) && (angle_vec[i] > rx_phimin))
             {
                 rx_sectored_beam_elevation[i] = rx_mainbeam_gain_value;
+                mrx_sectored_beam_elevation(i) = rx_mainbeam_gain_value;
             }
             else
             {
                 if (SecFidel == 2)
                 {
+                    mrx_sectored_beam_elevation(i) = unity_gain;
                     rx_sectored_beam_elevation[i] = unity_gain;
                 }
                 else if (SecFidel == 3)
                 {
+                    mrx_sectored_beam_elevation(i) = rx_sidelobe_gain_value;
                     rx_sectored_beam_elevation[i] = rx_sidelobe_gain_value;
                 }
-                else
-                {
-                    rx_sectored_beam_elevation[i] = unity_gain;
-                }
+
             }
 
 
 
 
-            k.push_back(i - alt_az * (no_antennas - 1) / 2); //DFT index
+            k.push_back(i - alt_az * (no_antennas - 1) / 2.0); //DFT index
             psi.push_back(2 * PI * k[i] / no_antennas);
-            n.push_back(i - (no_antennas - 1) / 2);
+            n.push_back(i - (no_antennas - 1) / 2.0);
+
+            mk(i) = i - alt_az * (no_antennas - 1) / 2.0;
+            mpsi(i) = 2 * PI * mk(i) / no_antennas;
+            mn(i) = i - (no_antennas - 1) / 2.0;
+
+
+
             tx_azimuth_awv_domain.push_back(tx_sectored_beam_azimuth[i] * exp(-1i * conj(psi[i]) * n[i]));
             tx_elevation_awv_domain.push_back(tx_sectored_beam_elevation[i] * exp(-1i * conj(psi[i]) * n[i]));
             rx_azimuth_awv_domain.push_back(rx_sectored_beam_azimuth[i] * exp(-1i * conj(psi[i]) * n[i]));
@@ -1053,46 +1108,168 @@ public:
             awn_rx_elevation.push_back(rx_elevation_awv_domain[i] * window_vec[i]);
 
             i++;
+
+
+
+
         }
+
+
+        ma_temp = -1i * (mpsi * mn.transpose());
+        i1 = 0;
+        while (i1 < no_antennas)
+        {
+            i2 = 0;
+            while (i2 < no_antennas)
+            {
+                ma_temp(i1, i2) = exp(ma_temp(i1, i2));
+                i2++;
+            }
+            i1++;
+        }
+
+
+
+
+        mtx_azimuth_awv_domain = mtx_sectored_beam_azimuth.transpose() * ma_temp;
+        mtx_elevation_awv_domain = mtx_sectored_beam_elevation.transpose() * ma_temp;
+        mrx_azimuth_awv_domain = mrx_sectored_beam_azimuth.transpose() * ma_temp;
+        mrx_elevation_awv_domain = mrx_sectored_beam_elevation.transpose() * ma_temp;
+
+        i = 0;
+        while (i < no_antennas)
+        {
+            mawn_tx_azimuth(i) = window_vec[i] * mtx_azimuth_awv_domain(i);
+            mawn_tx_elevation(i) = window_vec[i] * mtx_elevation_awv_domain(i);
+            mawn_rx_azimuth(i) = window_vec[i] * mrx_azimuth_awv_domain(i);
+            mawn_rx_elevation(i) = window_vec[i] * mrx_elevation_awv_domain(i);
+            i++;
+        }
+
         i = 0;
         while (i < no_antennas - 1)
         {
-            ax_tx_azimuth.push_back(exp(-1i * PI * n[i])* awn_tx_azimuth[i]);
-            ax_tx_elevation.push_back(exp(-1i * PI * n[i])* awn_tx_elevation[i]);
-            ax_rx_azimuth.push_back(exp(-1i * PI * n[i])* awn_rx_azimuth[i]);
-            ax_rx_elevation.push_back(exp(-1i * PI * n[i])* awn_rx_elevation[i]);
+            ax_tx_azimuth.push_back(exp(-1i * PI * complex<double>(i,0))* awn_tx_azimuth[i]);
+            ax_tx_elevation.push_back(exp(-1i * PI * complex<double>(i, 0))* awn_tx_elevation[i]);
+            ax_rx_azimuth.push_back(exp(-1i * PI * complex<double>(i, 0))* awn_rx_azimuth[i]);
+            ax_rx_elevation.push_back(exp(-1i * PI * complex<double>(i, 0))* awn_rx_elevation[i]);
+
+
+            max_tx_azimuth(i) = (exp(-1i * PI * complex<double>(i, 0))* mawn_tx_azimuth(i));
+            max_tx_elevation(i) = (exp(-1i * PI * complex<double>(i, 0))* mawn_tx_elevation(i));
+            max_rx_azimuth(i) = (exp(-1i * PI * complex<double>(i, 0))* mawn_rx_azimuth(i));
+            max_rx_elevation(i) = (exp(-1i * PI * complex<double>(i, 0))* mawn_rx_elevation(i));
+
+
+           
+
             i++;
         }
 
-        int zeroadded_size = zeroadd.size();
-        int a_tx_size = no_antennas - 1 + zeroadded_size;
+
+
+        complex<double> maxte = complex<double>(0, 0);
+        complex<double> maxta = complex<double>(0, 0);
+        complex<double> maxre = complex<double>(0, 0);
+        complex<double> maxra = complex<double>(0, 0);
+        int tempsize = no_antennas - 1;
         i = 0;
-        while (i < no_antennas - 1)
+        while (i < tempsize)
         {
-            a_tx_azimuth.push_back(ax_tx_azimuth[i]);
-            a_tx_elevation.push_back(ax_tx_elevation[i]);
-            a_rx_azimuth.push_back(ax_rx_azimuth[i]);
-            a_rx_elevation.push_back(ax_rx_elevation[i]);
+            awk_tx_azimuth.push_back(max_tx_azimuth(i));
+            awk_tx_elevation.push_back(max_tx_elevation(i));
+            awk_rx_azimuth.push_back(max_rx_azimuth(i));
+            awk_rx_elevation.push_back(max_rx_elevation(i));
+
             i++;
         }
+
+        while (i < a_zero_totalsize - 1)
+        {
+            awk_tx_azimuth.push_back(complex<double>(0.0, 0.0));
+            awk_tx_elevation.push_back(complex<double>(0.0, 0.0));
+            awk_rx_azimuth.push_back(complex<double>(0.0, 0.0));
+            awk_rx_elevation.push_back(complex<double>(0.0, 0.0));
+            i++;
+        }
+
+
+        complex<double> ta0 = awk_tx_azimuth[0];
+        complex<double> te0 = awk_tx_elevation[0];
+        complex<double> ra0 = awk_rx_azimuth[0];
+        complex<double> re0 = awk_rx_elevation[0];
+        awk_tx_azimuth = idftc(awk_tx_azimuth);
+        awk_tx_elevation = idftc(awk_tx_elevation);
+        awk_rx_azimuth = idftc(awk_rx_azimuth);
+        awk_rx_elevation = idftc(awk_rx_elevation);
+
+
+        awk_tx_azimuth.push_back(awk_tx_azimuth[0]);
+        awk_tx_elevation.push_back(awk_tx_elevation[0]);
+        awk_rx_azimuth.push_back(awk_rx_azimuth[0]);
+        awk_rx_elevation.push_back(awk_rx_elevation[0]);
+
+
+
         i = 0;
-        while (i < zeroadded_size-1)
+        while (i < a_zero_totalsize)
         {
-            a_tx_azimuth.push_back(complex<double>(0,0));
-            a_tx_elevation.push_back(complex<double>(0, 0));
-            a_rx_azimuth.push_back(complex<double>(0, 0));
-            a_rx_elevation.push_back(complex<double>(0, 0));
+            if (abs(maxte) < abs(awk_tx_elevation[i]))
+            {
+                maxte = awk_tx_elevation[i];
+            }
+            awk_tx_elevation[i] += te0;
+
+            if (abs(maxta) < abs(awk_tx_azimuth[i]))
+            {
+                maxta = awk_tx_azimuth[i];
+            }
+            awk_tx_azimuth[i] += ta0;
+
+            if (abs(maxre) < abs(awk_rx_elevation[i]))
+            {
+                maxre = awk_rx_elevation[i];
+            }
+            awk_rx_elevation[i] += re0;
+
+            if (abs(maxra) < abs(awk_rx_azimuth[i]))
+            {
+                maxra = awk_rx_azimuth[i];
+            }
+            awk_rx_azimuth[i] += ra0;
             i++;
         }
 
-        awn_tx_azimuth = idftc(a_tx_azimuth);
+      
 
-        int ti = 0;
-        while (ti < tx_azimuth_awv_domain.size())
+       
+
+        i = 0;
+        while (i < a_zero_totalsize)
         {
-            cout << tx_azimuth_awv_domain[ti] << " , ";
-            ti++;
+            awk_tx_azimuth[i] = tx_mainbeam_gain_value * awk_tx_azimuth[i] / maxta;
+            awk_tx_elevation[i] = tx_mainbeam_gain_value * awk_tx_elevation[i] / maxte;
+            awk_rx_azimuth[i] = rx_mainbeam_gain_value * awk_rx_azimuth[i] / maxra;
+            awk_rx_elevation[i] = rx_mainbeam_gain_value * awk_rx_elevation[i] / maxre;
+
+            i++;
         }
+
+        
+
+        antenna_out.Gain = abs(awk_tx_azimuth[ceil(tx_angle_azimuth/new_angleres)-1]) * abs(awk_tx_elevation[ceil(tx_angle_elevation / new_angleres)-1])
+            * abs(awk_rx_azimuth[ceil(rx_angle_azimuth / new_angleres)-1]) * abs(awk_rx_elevation[ceil(rx_angle_elevation / new_angleres)-1]);
+
+
+        antenna_out.Gain_vec.clear();
+        i = 0;
+        while (i < IDv.size())
+        {
+            antenna_out.Gain_vec.push_back(abs(awk_tx_azimuth[ceil(TxAziAng[i] / new_angleres) - 1]) * abs(awk_tx_elevation[ceil(TxEleAng[i] / new_angleres) - 1])
+                * abs(awk_rx_azimuth[ceil(RxAziAng[i] / new_angleres) - 1]) * abs(awk_rx_elevation[ceil(RxEleAng[i] / new_angleres) - 1]));
+            i++;
+        }
+        return antenna_out;
     }
 
     vector<double>& nextpow2v(vector<double>& darray)
